@@ -1,20 +1,20 @@
 package com.iambulanva.camera
 
-import android.graphics.ImageDecoder
+import android.graphics.*
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.GridLayoutManager
+import com.iambulanva.camera.data.*
 import com.iambulanva.camera.databinding.ActivityMainBinding
+import kotlinx.coroutines.*
+import java.io.ByteArrayOutputStream
 import java.io.File
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-
+import java.util.concurrent.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,6 +22,8 @@ class MainActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var photoDao: PhotoDAO
+    private lateinit var photoAdapter: GalleryAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,18 +31,33 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         outputDirectory = getOutputDirectory()
         cameraExecutor = Executors.newSingleThreadExecutor()
+        val database = PhotoDatabase.getInstance(this)
+        photoDao = database.getPhotoDAO()
         setOnClickCallback()
     }
 
     private fun setOnClickCallback(){
         with(binding){
+            photoAdapter = GalleryAdapter()
+            rv.layoutManager = GridLayoutManager(this@MainActivity, 2)
+            rv.adapter = photoAdapter
             ivCamera.setOnClickListener {
                 if (getCameraPermission()){
                     startCamera()
+                    viewFinder.visibility = View.VISIBLE
                     ivCamera.setOnClickListener { takePhoto() }
                 } else {
                     Camera(this@MainActivity).requestPermission()
                 }
+            }
+            CoroutineScope(Dispatchers.Main).launch {
+                val photos = photoDao.getAllPhotos()
+
+                // Перевірка, чи фото не мають значення null
+                val nonNullPhotos = photos.filter { it.bitmap != null }
+
+                // Використання тільки ненульових фотографій
+                photoAdapter.setPhotos(nonNullPhotos)
             }
         }
     }
@@ -97,8 +114,16 @@ class MainActivity : AppCompatActivity() {
                             savedUri
                         )
                     )
+                    // Збереження фото у базу даних Room
+                    val byteStream = ByteArrayOutputStream()
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteStream)
+                    val byteArray = byteStream.toByteArray()
 
-                    // Тепер ви можете використовувати 'bitmap' як вам потрібно
+                    // Використовуйте корутину або інший спосіб для виклику в основному потоці
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val photoEntity = PhotoEntity(bitmap = byteArray)
+                        photoDao.insertPhoto(photoEntity)
+                    }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
