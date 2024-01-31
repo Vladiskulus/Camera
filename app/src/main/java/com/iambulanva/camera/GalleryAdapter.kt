@@ -7,12 +7,17 @@ import androidx.recyclerview.widget.RecyclerView
 import com.iambulanva.camera.data.PhotoEntity
 import com.iambulanva.camera.databinding.ItemPhotoBinding
 
-class GalleryAdapter(): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-    private var photos: List<PhotoEntity> = listOf()
+class GalleryAdapter(private var photoPaths: List<String> = emptyList()): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     fun setPhotos(photos: List<PhotoEntity>) {
-        this.photos = photos
+        // Оновлюємо адаптер із списком PhotoEntity
+        this.photoPaths = photos.mapNotNull { it.filePath }
+        notifyDataSetChanged()
+    }
+
+    fun addPhoto(photoPath: String) {
+        // Додаємо новий шлях до фотографії та оновлюємо адаптер
+        photoPaths = photoPaths.toMutableList().apply { add(photoPath) }
         notifyDataSetChanged()
     }
 
@@ -21,11 +26,12 @@ class GalleryAdapter(): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder = PhotoViewHolder(
         ItemPhotoBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
-    override fun getItemCount(): Int = photos.size
+    override fun getItemCount(): Int = photoPaths.size
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         with((holder as PhotoViewHolder).binding){
-            iv.setImageBitmap(BitmapFactory.decodeByteArray(photos[position].bitmap, 0, photos[position].bitmap.size))
+            // Завантаження фотографії за шляхом
+            iv.setImageBitmap(BitmapFactory.decodeFile(photoPaths[position]))
         }
     }
 }

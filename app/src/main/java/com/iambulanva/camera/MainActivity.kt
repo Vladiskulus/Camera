@@ -1,7 +1,6 @@
 package com.iambulanva.camera
 
-import android.graphics.*
-import android.net.Uri
+
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -18,12 +17,13 @@ import java.util.concurrent.*
 
 class MainActivity : AppCompatActivity() {
 
+    // Останній шлях до зображення, щоб пізніше вивантажити його в галерею
+    private var lastSavedImagePath: String? = null
+
     private lateinit var binding: ActivityMainBinding
     private var imageCapture: ImageCapture? = null
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
-    private lateinit var photoDao: PhotoDAO
-    private lateinit var photoAdapter: GalleryAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,16 +31,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         outputDirectory = getOutputDirectory()
         cameraExecutor = Executors.newSingleThreadExecutor()
-        val database = PhotoDatabase.getInstance(this)
-        photoDao = database.getPhotoDAO()
         setOnClickCallback()
     }
 
     private fun setOnClickCallback(){
         with(binding){
-            photoAdapter = GalleryAdapter()
             rv.layoutManager = GridLayoutManager(this@MainActivity, 2)
-            rv.adapter = photoAdapter
             ivCamera.setOnClickListener {
                 if (getCameraPermission()){
                     startCamera()
@@ -50,21 +46,20 @@ class MainActivity : AppCompatActivity() {
                     Camera(this@MainActivity).requestPermission()
                 }
             }
+
             CoroutineScope(Dispatchers.Main).launch {
-                val photos = photoDao.getAllPhotos()
+                val photoPaths = getPhotoPaths()
 
-                // Перевірка, чи фото не мають значення null
-                val nonNullPhotos = photos.filter { it.bitmap != null }
-
-                // Використання тільки ненульових фотографій
-                photoAdapter.setPhotos(nonNullPhotos)
+                // Оновлення адаптера зі списком шляхів до фотографій
+                val photoAdapter = GalleryAdapter(photoPaths)
+                rv.adapter = photoAdapter
             }
         }
     }
 
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
         val cameraSelector = CameraSelector.Builder()
             .requireLensFacing(CameraSelector.LENS_FACING_BACK)
             .build()
@@ -104,44 +99,50 @@ class MainActivity : AppCompatActivity() {
             outputOptions, ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
 
-
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    // Фото успішно збережено, отримати Bitmap
-                    val savedUri = Uri.fromFile(File(outputDirectory, "temp_photo.jpg"))
-                    val bitmap = ImageDecoder.decodeBitmap(
-                        ImageDecoder.createSource(
-                            contentResolver,
-                            savedUri
-                        )
-                    )
-                    // Збереження фото у базу даних Room
-                    val byteStream = ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteStream)
-                    val byteArray = byteStream.toByteArray()
-
-                    // Використовуйте корутину або інший спосіб для виклику в основному потоці
+                    // Фото успішно збережено, отримати шлях та оновити галерею
+                    lastSavedImagePath = outputFileResults.savedUri?.path
                     CoroutineScope(Dispatchers.IO).launch {
-                        val photoEntity = PhotoEntity(bitmap = byteArray)
-                        photoDao.insertPhoto(photoEntity)
+                        // Не забудьте викликати функцію в основному потоці
+                        withContext(Dispatchers.Main) {
+                            updateGalleryAdapter()
+                        }
                     }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-
+                    // Обробка помилок
                 }
             })
+    }
+
+    private suspend fun updateGalleryAdapter() {
+        lastSavedImagePath?.let { path ->
+            // Оновлення адаптера з новим шляхом до фотографії
+            val photoAdapter = binding.rv.adapter as? GalleryAdapter
+            photoAdapter?.addPhoto(path)
+        }
     }
 
     private fun getOutputDirectory(): File {
         val mediaDir = externalMediaDirs.firstOrNull()?.let {
             File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
         }
-        return if (mediaDir != null && mediaDir.exists())
-            mediaDir else filesDir
+        return mediaDir ?: filesDir
     }
 
-    private fun getCameraPermission():Boolean{
+    private fun getCameraPermission(): Boolean {
         return Camera(this).checkPermission()
+    }
+
+    private suspend fun getPhotoPaths(): List<String> = withContext(Dispatchers.IO) {
+        val appSpecificDir = File(filesDir, "photos")
+        if (!appSpecificDir.exists()) {
+            appSpecificDir.mkdirs()
+        }
+
+        val photoFiles = appSpecificDir.listFiles() ?: arrayOf()
+        return@withContext photoFiles.mapNotNull { it.absolutePath }
     }
 
     override fun onDestroy() {
