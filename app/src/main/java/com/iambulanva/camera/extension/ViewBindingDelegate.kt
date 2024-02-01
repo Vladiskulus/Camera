@@ -1,4 +1,4 @@
-package com.vn.iambulance.prototype_20.extensions
+package com.iambulanva.camera.extension
 
 import android.view.View
 import androidx.fragment.app.Fragment

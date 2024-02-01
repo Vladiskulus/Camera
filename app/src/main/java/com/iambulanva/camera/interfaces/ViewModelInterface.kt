@@ -1,6 +1,5 @@
-package com.vn.iambulance.prototype_20.interfaces
+package com.iambulanva.camera.interfaces
 
-import androidx.lifecycle.ViewModel
 
 interface ViewModelInterface {
 

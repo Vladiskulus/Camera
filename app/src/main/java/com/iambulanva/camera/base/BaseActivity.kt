@@ -1,37 +1,21 @@
-package com.vn.iambulance.prototype_20.ui.base
+package com.iambulanva.camera.base
 
-import android.content.Context
-import android.content.Intent
-import android.graphics.Color
-import android.os.Build
+import android.content.*
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
-import androidx.activity.viewModels
-import androidx.annotation.ColorInt
-import androidx.core.content.res.ResourcesCompat
-import androidx.core.graphics.red
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
-import com.vn.iambulance.localefeature.DefaultLocaleHelper
-import com.vn.iambulance.prototype_20.R
-import com.vn.iambulance.prototype_20.interfaces.ActivityListener
-import com.vn.iambulance.prototype_20.interfaces.OnBackPressedListener
-import com.vn.iambulance.prototype_20.interfaces.UIControllInterface
-import com.vn.iambulance.prototype_20.interfaces.ViewModelInterface
-import com.vn.iambulance.prototype_20.ui.mainScreen.MainViewModel
+import com.iambulanva.camera.R
+import com.iambulanva.camera.interfaces.ActivityListener
+import com.iambulanva.camera.interfaces.OnBackPressedListener
+import com.iambulanva.camera.interfaces.UIControlInterface
+import com.iambulanva.camera.interfaces.ViewModelInterface
 
 
-open class BaseActivity: FragmentActivity(), ViewModelInterface, UIControllInterface, ActivityListener, OnBackPressedListener {
-
-    protected val mainViewModel by viewModels<MainViewModel>()
-
-    override fun attachBaseContext(newBase: Context?) {
-        super.attachBaseContext(DefaultLocaleHelper.getInstance(newBase!!).onAttach())
-    }
+open class BaseActivity: FragmentActivity(), ViewModelInterface, UIControlInterface,
+    ActivityListener, OnBackPressedListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,7 +38,7 @@ open class BaseActivity: FragmentActivity(), ViewModelInterface, UIControllInter
     }
 
 
-    internal fun switchToFragment(fragment: Fragment, container: Int = R.id.fcv_container) {
+    internal fun switchToFragment(fragment: Fragment, container: Int = R.id.fragment_container) {
         val transaction = supportFragmentManager.beginTransaction()
         transaction.replace(container, fragment)
         transaction.commit()

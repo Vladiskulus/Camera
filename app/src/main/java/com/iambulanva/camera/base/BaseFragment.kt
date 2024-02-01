@@ -1,15 +1,19 @@
-package com.vn.iambulance.prototype_20.ui.base
+package com.iambulanva.camera.base
 
 import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
-import com.vn.iambulance.prototype_20.R
-import com.vn.iambulance.prototype_20.interfaces.*
+import com.iambulanva.camera.R
+import com.iambulanva.camera.interfaces.*
 
-abstract class BaseFragment(layout: Int): Fragment(layout), ViewModelInterface, UIControllInterface {
+abstract class BaseFragment(layout: Int): Fragment(layout), ViewModelInterface, UIControlInterface {
 
     abstract val fragment: BaseFragment
+
+    companion object{
+        const val FRAGMENT_ARGUMENT = "fragment_argument"
+    }
     internal val activity: BaseActivity get() = requireActivity() as BaseActivity
     internal val context: Context get() = requireContext()
 
@@ -21,7 +25,7 @@ abstract class BaseFragment(layout: Int): Fragment(layout), ViewModelInterface, 
         onClickCallback()
     }
 
-    protected fun switchToFragment(fragment: Fragment, container: Int = R.id.fcv_container) {
+    protected fun switchToFragment(fragment: Fragment, container: Int = R.id.fragment_container) {
         val transaction = requireActivity().supportFragmentManager.beginTransaction()
         transaction.replace(container, fragment)
         transaction.commit()

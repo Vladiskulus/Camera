@@ -1,4 +1,4 @@
-package com.vn.iambulance.prototype_20.extensions
+package com.iambulanva.camera.extension
 
 import android.content.Context
 import android.content.res.Resources
